@@ -9,41 +9,41 @@ import { renderAlertsPage } from './pages/AlertsPage.js';
 
 let currentPage = 'dashboard';
 
-// ============================================================
-// Sidebar
-// ============================================================
+const pageTitles = {
+  dashboard: 'Tổng quan thị trường',
+  analysis: 'Phân tích kỹ thuật',
+  alerts: 'Cảnh báo giá'
+};
+
 function renderSidebar() {
   const sidebar = document.getElementById('sidebar');
   sidebar.innerHTML = `
     <div class="sidebar-logo">
-      <div class="logo-icon">📈</div>
+      <div class="logo-mark">SA</div>
       <div>
-        <h1>StockAI</h1>
-        <span>Phân tích thông minh</span>
+        <h1>StockAI Pro</h1>
+        <span>Vietnam equity terminal</span>
       </div>
     </div>
     <nav class="sidebar-nav">
-      <div class="nav-section-title">Menu chính</div>
-      <div class="nav-item ${currentPage === 'dashboard' ? 'active' : ''}" data-page="dashboard" id="nav-dashboard">
-        <span class="nav-icon">📊</span> Tổng quan
-      </div>
-      <div class="nav-item ${currentPage === 'analysis' ? 'active' : ''}" data-page="analysis" id="nav-analysis">
-        <span class="nav-icon">🔍</span> Phân tích
-      </div>
-      <div class="nav-item ${currentPage === 'alerts' ? 'active' : ''}" data-page="alerts" id="nav-alerts">
-        <span class="nav-icon">🔔</span> Cảnh báo giá
-      </div>
-      <div class="nav-section-title">Hệ thống</div>
-      <div class="nav-item" style="opacity:0.5;cursor:default">
-        <span class="nav-icon">⚙️</span> Cài đặt
-      </div>
-      <div class="nav-item" style="opacity:0.5;cursor:default">
-        <span class="nav-icon">👤</span> Tài khoản
-      </div>
+      <div class="nav-section-title">Workspace</div>
+      <button class="nav-item ${currentPage === 'dashboard' ? 'active' : ''}" data-page="dashboard">
+        <span class="nav-icon">⌁</span> Tổng quan
+      </button>
+      <button class="nav-item ${currentPage === 'analysis' ? 'active' : ''}" data-page="analysis">
+        <span class="nav-icon">⌕</span> Phân tích
+      </button>
+      <button class="nav-item ${currentPage === 'alerts' ? 'active' : ''}" data-page="alerts">
+        <span class="nav-icon">!</span> Cảnh báo giá
+      </button>
+      <div class="nav-section-title">Market lists</div>
+      <div class="watch-chip positive">FPT +1.93%</div>
+      <div class="watch-chip positive">VCB +1.68%</div>
+      <div class="watch-chip negative">VIC -2.90%</div>
     </nav>
     <div class="sidebar-footer">
-      AWS Stock Analyzer v1.0<br>
-      Step 1 — Mock Data
+      <strong>AWS Stock Analyzer</strong>
+      <span>Mock data environment</span>
     </div>
   `;
 
@@ -60,48 +60,45 @@ function renderSidebar() {
   });
 }
 
-// ============================================================
-// Top Bar with Market Ticker
-// ============================================================
 function renderTopBar() {
   const topBar = document.getElementById('top-bar');
   const ms = mockMarketSummary;
-  const pageTitles = {
-    dashboard: 'Tổng Quan Thị Trường',
-    analysis: 'Phân Tích Kỹ Thuật',
-    alerts: 'Quản Lý Cảnh Báo Giá'
-  };
-
   topBar.innerHTML = `
     <div class="top-bar-left">
-      <h2>${pageTitles[currentPage] || 'Dashboard'}</h2>
+      <button class="mobile-menu" id="mobile-menu" aria-label="Mở menu">☰</button>
+      <div>
+        <h2>${pageTitles[currentPage] || 'Dashboard'}</h2>
+        <p>Dữ liệu giả lập cập nhật 23/06/2026 10:30</p>
+      </div>
     </div>
     <div class="market-ticker">
+      ${renderTicker('VN-Index', ms.vnIndex.value, ms.vnIndex.changePercent)}
+      ${renderTicker('HNX', ms.hnxIndex.value, ms.hnxIndex.changePercent)}
+      ${renderTicker('UPCOM', ms.upcomIndex.value, ms.upcomIndex.changePercent)}
       <div class="ticker-item">
-        <span class="ticker-label">VN-Index</span>
-        <span class="ticker-value ${ms.vnIndex.change >= 0 ? 'ticker-up' : 'ticker-down'}">
-          ${ms.vnIndex.value.toLocaleString('vi-VN')} 
-          ${ms.vnIndex.change >= 0 ? '▲' : '▼'} ${Math.abs(ms.vnIndex.change)}
-          (${ms.vnIndex.change >= 0 ? '+' : ''}${ms.vnIndex.changePercent}%)
-        </span>
+        <span class="ticker-label">GTGD</span>
+        <span class="ticker-value">${ms.totalValue}</span>
       </div>
-      <div class="ticker-item">
-        <span class="ticker-label">HNX</span>
-        <span class="ticker-value ${ms.hnxIndex.change >= 0 ? 'ticker-up' : 'ticker-down'}">
-          ${ms.hnxIndex.value} ${ms.hnxIndex.change >= 0 ? '▲' : '▼'} ${Math.abs(ms.hnxIndex.change)}
-        </span>
-      </div>
-      <div class="ticker-item">
-        <span class="ticker-label">KL</span>
-        <span class="ticker-value" style="color:var(--accent-cyan)">${ms.totalVolume}</span>
-      </div>
+    </div>
+  `;
+
+  document.getElementById('mobile-menu')?.addEventListener('click', () => {
+    document.getElementById('sidebar')?.classList.toggle('open');
+  });
+}
+
+function renderTicker(label, value, changePercent) {
+  const isPositive = changePercent >= 0;
+  return `
+    <div class="ticker-item">
+      <span class="ticker-label">${label}</span>
+      <span class="ticker-value ${isPositive ? 'ticker-up' : 'ticker-down'}">
+        ${value.toLocaleString('vi-VN')} ${isPositive ? '▲' : '▼'} ${Math.abs(changePercent).toFixed(2)}%
+      </span>
     </div>
   `;
 }
 
-// ============================================================
-// Page Router
-// ============================================================
 function renderPage() {
   const container = document.getElementById('page-content');
   container.innerHTML = '';
@@ -120,9 +117,6 @@ function renderPage() {
   }
 }
 
-// ============================================================
-// Toast Notification
-// ============================================================
 window.showToast = function(message, type = 'info') {
   const existing = document.querySelector('.toast');
   if (existing) existing.remove();
@@ -135,17 +129,16 @@ window.showToast = function(message, type = 'info') {
   setTimeout(() => toast.remove(), 3000);
 };
 
-// Navigate to analysis page for a specific stock
 window.navigateToAnalysis = function(symbol) {
   currentPage = 'analysis';
   renderSidebar();
   renderTopBar();
-  renderAnalysisPage(document.getElementById('page-content'), symbol);
+  const container = document.getElementById('page-content');
+  container.innerHTML = '';
+  container.className = 'page-content page-enter';
+  renderAnalysisPage(container, symbol);
 };
 
-// ============================================================
-// Init
-// ============================================================
 renderSidebar();
 renderTopBar();
 renderPage();
