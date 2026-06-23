@@ -1,44 +1,70 @@
-// exports.handler là entry point của Lambda function, nhận event từ API Gateway khi có request từ Frontend
-exports.handler = async (event) => { // event chứa thông tin request từ Frontend, bao gồm body, headers, query params...
-    // 1. Log dữ liệu đầu vào để dễ dàng debug trên AWS CloudWatch
-    console.log("Received event:", JSON.stringify(event, null, 2));
+const { SQSClient, SendMessageCommand } = require("@aws-sdk/client-sqs");
+
+// Khởi tạo SQS Client (Khu vực có thể thay đổi tùy cấu hình của Nam và Thiên)
+const sqsClient = new SQSClient({ region: "ap-southeast-1" });
+
+exports.handler = async (event) => {
     try {
-        // 2. Parse dữ liệu (payload) gửi từ Frontend thông qua API Gateway
-        // API Gateway thường bọc body trong một chuỗi JSON
+        // 1. Parse dữ liệu từ API Gateway
         const body = JSON.parse(event.body);
-        const stockSymbol = body.stockSymbol; // Ví dụ: 'FPT', 'VCB'
-        const timeFrame = body.timeFrame;     // Ví dụ: '1D', '1W'
-        // TODO: Validate dữ liệu đầu vào (kiểm tra rỗng, sai định dạng...)
-        if (!stockSymbol) {
+        const { stockSymbol, timeFrame } = body;
+
+        // 2. Validate dữ liệu đầu vào
+        if (!stockSymbol || !timeFrame) {
             return {
                 statusCode: 400,
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message: "Thiếu mã cổ phiếu (stockSymbol)!" })
+                headers: { 
+                    "Access-Control-Allow-Origin": "*", 
+                    "Content-Type": "application/json" 
+                },
+                body: JSON.stringify({ message: "Thiếu thông tin mã cổ phiếu hoặc khung thời gian." })
             };
         }
-        // TODO: Viết logic đẩy dữ liệu này vào SQS hoặc lưu S3 (như sơ đồ kiến trúc)
-        console.log(`Đang xử lý mã cổ phiếu: ${stockSymbol} với khung thời gian: ${timeFrame}`);
-        // 3. Trả về kết quả cho Frontend (API Gateway yêu cầu format này)
+
+        // 3. Chuẩn bị payload để đẩy vào SQS
+        const messagePayload = {
+            stockSymbol: stockSymbol.toUpperCase(),
+            timeFrame: timeFrame,
+            timestamp: new Date().toISOString(),
+            status: "PENDING"
+        };
+
+        // 4. Lấy URL của SQS Queue từ biến môi trường (Environment Variables)
+        const queueUrl = process.env.SQS_QUEUE_URL;
+        if (queueUrl) {
+            const command = new SendMessageCommand({
+                QueueUrl: queueUrl,
+                MessageBody: JSON.stringify(messagePayload)
+            });
+            await sqsClient.send(command);
+            console.log(`Đã đẩy yêu cầu phân tích ${stockSymbol} vào SQS.`);
+        } else {
+            console.warn("Chưa cấu hình biến môi trường SQS_QUEUE_URL. Bỏ qua bước đẩy vào SQS.");
+        }
+
+        // 5. Trả về kết quả cho Frontend
         return {
             statusCode: 200,
-            headers: {
-                // Rất quan trọng để tránh lỗi CORS khi Frontend gọi API
+            headers: { 
                 "Access-Control-Allow-Origin": "*", 
-                "Content-Type": "application/json"
+                "Content-Type": "application/json" 
             },
             body: JSON.stringify({
-                message: "Đã tiếp nhận yêu cầu phân tích thành công!",
-                data: { stockSymbol, status: "pending" }
+                message: "Đã tiếp nhận yêu cầu phân tích thành công",
+                data: messagePayload
             })
         };
 
     } catch (error) {
-        console.error("Lỗi xử lý Lambda:", error);
-        // Trả về lỗi 500 nếu có exception
+        console.error("Lỗi Ingestion Lambda:", error);
+        
         return {
             statusCode: 500,
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: "Lỗi hệ thống nội bộ", error: error.message })
+            headers: { 
+                "Access-Control-Allow-Origin": "*", 
+                "Content-Type": "application/json" 
+            },
+            body: JSON.stringify({ message: "Lỗi máy chủ nội bộ", error: error.message })
         };
     }
 };

@@ -1,0 +1,19 @@
+{
+  "name": "processing-lambda",
+  "version": "1.0.0",
+  "description": "Xử lý tin nhắn SQS, tính chỉ số, gọi AI Bedrock, lưu DynamoDB và gửi cảnh báo",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.1075.0",
+    "@aws-sdk/client-dynamodb": "^3.1075.0",
+    "@aws-sdk/lib-dynamodb": "^3.1075.0",
+    "@aws-sdk/client-sns": "^3.1075.0"
+  }
+}

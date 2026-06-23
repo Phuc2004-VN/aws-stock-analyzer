@@ -1,0 +1,15 @@
+{
+  "name": "aws-stock-analyzer-backend",
+  "version": "1.0.0",
+  "description": "Monorepo backend cho Hệ thống phân tích kỹ thuật và cảnh báo giá cổ phiếu tự động sử dụng AWS Serverless & AI",
+  "scripts": {
+    "test:local": "node test_local.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.1075.0",
+    "@aws-sdk/client-dynamodb": "^3.1075.0",
+    "@aws-sdk/client-sns": "^3.1075.0",
+    "@aws-sdk/client-sqs": "^3.1075.0",
+    "@aws-sdk/lib-dynamodb": "^3.1075.0"
+  }
+}

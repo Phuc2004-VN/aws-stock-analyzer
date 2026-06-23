@@ -1,0 +1,30 @@
+Kế hoạch thực hiện đồ án cuối kỳ
+---------------------------------------
+Step 1 (23/6/2026)
+Thiết kế và chuẩn bị hệ thống 
+Lực và Phúc thiết kế giao diện Dashboard thiết kế API và cấu trúc Backend
+Nam và Thiên hoàn thiện kiến trúc AWS xác định các service cần sử dụng và cấu hình ban đầu
+Kiệt tìm hiểu chức năng hệ thống và chuẩn bị Test Case
+----------------------------------------
+Step 2 (24-25/6/2026)
+Xây dựng chức năng cơ bản 
+Lực và Phúc làm Login Dashboard API Backend và kết nối Frontend Backend
+Nam và Thiên cấu hình Cognito S3 CloudFront API Gateway Lambda EventBridge và lưu dữ liệu vào S3
+Kiệt test các chức năng đã làm và ghi nhận lỗi
+-----------------------------------------------------
+Step 3 (26-27/6/2026)
+Phát triển AI và xử lý dữ liệu 
+Lực và Phúc hoàn thiện giao diện biểu đồ hiển thị kết quả AI và chức năng gửi chiến lược
+Nam và Thiên tích hợp Bedrock DynamoDB KMS SQS SSM và hoàn thiện Data Pipeline
+Kiệt kiểm tra giao diện API và các luồng xử lý dữ liệu
+---------------------------------------------------
+Step 4 (28-29/6/2026)
+Tích hợp và hoàn thiện hệ thống 
+Lực và Phúc tích hợp toàn bộ Frontend Backend sửa lỗi và tối ưu ứng dụng
+Nam và Thiên cấu hình CloudWatch SNS kiểm tra bảo mật và hỗ trợ tích hợp AWS
+Kiệt thực hiện test tổng thể kiểm tra lại các lỗi sau khi chỉnh sửa
+-----------------------------------------------------------
+Step 5 Kiểm tra cuối và chuẩn bị Demo (30/06/2026)
+Cả nhóm kiểm tra toàn bộ hệ thống sửa lỗi cuối cùng hoàn thiện báo cáo và chuẩn bị thuyết trình Demo
+Luồng Demo chính
+Trader đăng nhập qua Cognito đi qua API Gateway xử lý bằng Lambda lưu và lấy dữ liệu từ S3 Bedrock DynamoDB hiển thị lên Dashboard và gửi chiến lược cho User
