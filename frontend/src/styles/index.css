@@ -10,6 +10,7 @@
   --text-secondary: #a8b3c1;
   --text-muted: #6f7d8f;
   --accent-blue: #4c8dff;
+  --blue-bg: rgba(76, 141, 255, 0.13);
   --accent-cyan: #28c7c0;
   --green: #20c997;
   --green-bg: rgba(32, 201, 151, 0.13);
@@ -40,6 +41,86 @@ body {
 button, input, select { font: inherit; }
 button { border: 0; }
 em { font-style: normal; }
+
+.auth-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 18% 16%, rgba(76, 141, 255, 0.18), transparent 32%),
+    radial-gradient(circle at 82% 18%, rgba(40, 199, 192, 0.14), transparent 28%),
+    var(--bg-primary);
+}
+
+.auth-panel {
+  width: min(430px, 100%);
+  padding: 26px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  background: rgba(17, 23, 32, 0.96);
+  box-shadow: var(--shadow);
+}
+
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.auth-brand h1 {
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.auth-brand span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin-top: 2px;
+}
+
+.auth-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  margin-bottom: 18px;
+}
+
+.auth-tab {
+  min-height: 36px;
+  border-radius: 5px;
+  color: var(--text-muted);
+  background: transparent;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.auth-tab.active {
+  color: var(--text-primary);
+  background: var(--bg-panel-soft);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.auth-form input {
+  width: 100%;
+}
+
+.auth-submit {
+  width: 100%;
+  justify-content: center;
+  margin-top: 4px;
+}
 
 #app {
   display: flex;
@@ -159,6 +240,12 @@ em { font-style: normal; }
   border-top: 1px solid var(--border-color);
   color: var(--text-secondary);
   font-size: 0.82rem;
+}
+
+.logout-button {
+  width: 100%;
+  justify-content: center;
+  margin-top: 10px;
 }
 
 .main-content {
@@ -900,6 +987,7 @@ select:focus {
 .status-ACTIVE,
 .condition-ABOVE { background: var(--green-bg); color: var(--green); }
 .status-TRIGGERED { background: var(--yellow-bg); color: var(--yellow); }
+.status-SENT { background: var(--blue-bg); color: var(--accent-blue); }
 .condition-BELOW { background: var(--red-bg); color: var(--red); }
 
 .loading-spinner {

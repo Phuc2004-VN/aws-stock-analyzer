@@ -2,8 +2,8 @@
  * Analysis Page - Phân tích kỹ thuật chi tiết
  */
 import { Chart, registerables } from 'chart.js';
-import { mockReports, availableStocks, formatVND, formatPercent, getRecommendationColor } from '../data/mockData.js';
-import { submitAnalysis } from '../services/apiService.js';
+import { availableStocks, formatVND, formatPercent, getRecommendationColor } from '../data/mockData.js';
+import { getReport, submitAnalysis } from '../services/apiService.js';
 Chart.register(...registerables);
 let priceChart = null;
 
@@ -55,10 +55,20 @@ async function handleAnalyze() {
   } finally { btn.disabled = false; }
 }
 
-function loadAnalysis(symbol) {
-  const r = mockReports[symbol];
-  if (!r) return;
+async function loadAnalysis(symbol) {
   const c = document.getElementById('analysis-content');
+  if (!c) return;
+  c.innerHTML = `<div class="card" style="grid-column:1/-1;text-align:center;padding:42px"><span class="loading-spinner"></span></div>`;
+
+  let r;
+  try {
+    const timeframe = document.getElementById('analysis-timeframe')?.value || '1D';
+    r = await getReport(symbol, timeframe);
+  } catch (error) {
+    c.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-state-icon">!</div><div class="empty-state-text">${error.message}</div></div>`;
+    return;
+  }
+
   const isP = r.change >= 0;
   const rc = getRecommendationColor(r.aiAnalysis.recommendation);
   c.innerHTML = `

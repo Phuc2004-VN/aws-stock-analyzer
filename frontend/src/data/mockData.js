@@ -196,55 +196,23 @@ export const mockReports = {
 };
 
 // ============================================================
-// Mock Alerts - API 1.3, 1.4 GET /api/alerts
+// Mock Alerts - AI Agent generated after report processing
 // ============================================================
-export const mockAlerts = [
-  {
-    alertId: "alert-a1b2c3d4",
-    stockSymbol: "FPT",
-    targetPrice: 140000,
-    condition: "ABOVE",
-    status: "ACTIVE",
-    email: "phuc@example.com",
-    createdAt: "2026-06-23T03:25:00.000Z"
-  },
-  {
-    alertId: "alert-e5f6g7h8",
-    stockSymbol: "VIC",
-    targetPrice: 42000,
-    condition: "BELOW",
-    status: "ACTIVE",
-    email: "phuc@example.com",
-    createdAt: "2026-06-22T10:15:00.000Z"
-  },
-  {
-    alertId: "alert-i9j0k1l2",
-    stockSymbol: "HPG",
-    targetPrice: 30000,
-    condition: "ABOVE",
-    status: "TRIGGERED",
-    email: "phuc@example.com",
-    createdAt: "2026-06-20T08:00:00.000Z"
-  },
-  {
-    alertId: "alert-m3n4o5p6",
-    stockSymbol: "VCB",
-    targetPrice: 100000,
-    condition: "ABOVE",
-    status: "ACTIVE",
-    email: "phuc@example.com",
-    createdAt: "2026-06-21T14:30:00.000Z"
-  },
-  {
-    alertId: "alert-q7r8s9t0",
-    stockSymbol: "MSN",
-    targetPrice: 80000,
-    condition: "BELOW",
-    status: "TRIGGERED",
-    email: "phuc@example.com",
-    createdAt: "2026-06-19T09:45:00.000Z"
-  }
-];
+const strongRecommendations = new Set(['BUY', 'SELL', 'MUA MẠNH', 'BÁN MẠNH']);
+
+export const mockAlerts = Object.values(mockReports)
+  .filter(report => strongRecommendations.has(report.aiAnalysis.recommendation))
+  .map((report, index) => ({
+    alertId: `ai-alert-${report.stockSymbol.toLowerCase()}-${index + 1}`,
+    stockSymbol: report.stockSymbol,
+    companyName: report.companyName,
+    recommendation: report.aiAnalysis.recommendation,
+    confidenceScore: report.aiAnalysis.confidence_score || report.aiAnalysis.confidenceScore || (report.aiAnalysis.recommendation === 'SELL' ? 86 : 82),
+    currentPrice: report.currentPrice,
+    triggerReason: report.aiAnalysis.reasoning,
+    status: 'SENT',
+    createdAt: report.timestamp
+  }));
 
 // ============================================================
 // Mock Market Summary

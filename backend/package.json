@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "Monorepo backend cho Hệ thống phân tích kỹ thuật và cảnh báo giá cổ phiếu tự động sử dụng AWS Serverless & AI",
   "scripts": {
-    "test:local": "node test_local.js"
+    "test:local": "node test_local.js",
+    "dev:local": "node local-server.js"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.1075.0",

@@ -3,6 +3,8 @@
  */
 import './styles/index.css';
 import { mockMarketSummary } from './data/mockData.js';
+import { getCurrentUser, isAuthenticated, logout } from './services/authService.js';
+import { renderLoginPage } from './pages/LoginPage.js';
 import { renderDashboardPage } from './pages/DashboardPage.js';
 import { renderAnalysisPage } from './pages/AnalysisPage.js';
 import { renderAlertsPage } from './pages/AlertsPage.js';
@@ -12,10 +14,25 @@ let currentPage = 'dashboard';
 const pageTitles = {
   dashboard: 'Tổng quan thị trường',
   analysis: 'Phân tích kỹ thuật',
-  alerts: 'Cảnh báo giá'
+  alerts: 'Cảnh báo AI'
 };
 
+function bootstrapApp() {
+  document.body.innerHTML = `
+    <aside id="sidebar" class="sidebar"></aside>
+    <main class="main-content">
+      <header id="top-bar" class="top-bar"></header>
+      <div id="page-content" class="page-content"></div>
+    </main>
+  `;
+
+  renderSidebar();
+  renderTopBar();
+  renderPage();
+}
+
 function renderSidebar() {
+  const user = getCurrentUser();
   const sidebar = document.getElementById('sidebar');
   sidebar.innerHTML = `
     <div class="sidebar-logo">
@@ -34,7 +51,7 @@ function renderSidebar() {
         <span class="nav-icon">⌕</span> Phân tích
       </button>
       <button class="nav-item ${currentPage === 'alerts' ? 'active' : ''}" data-page="alerts">
-        <span class="nav-icon">!</span> Cảnh báo giá
+        <span class="nav-icon">!</span> Cảnh báo AI
       </button>
       <div class="nav-section-title">Market lists</div>
       <div class="watch-chip positive">FPT +1.93%</div>
@@ -42,8 +59,9 @@ function renderSidebar() {
       <div class="watch-chip negative">VIC -2.90%</div>
     </nav>
     <div class="sidebar-footer">
-      <strong>AWS Stock Analyzer</strong>
-      <span>Mock data environment</span>
+      <strong>${user?.email || 'AWS Stock Analyzer'}</strong>
+      <span>Fake JWT local mode</span>
+      <button class="ghost-button logout-button" id="logout-button" type="button">Đăng xuất</button>
     </div>
   `;
 
@@ -57,6 +75,12 @@ function renderSidebar() {
         renderPage();
       }
     });
+  });
+
+  document.getElementById('logout-button')?.addEventListener('click', () => {
+    logout();
+    currentPage = 'dashboard';
+    renderLoginPage(bootstrapApp);
   });
 }
 
@@ -139,6 +163,8 @@ window.navigateToAnalysis = function(symbol) {
   renderAnalysisPage(container, symbol);
 };
 
-renderSidebar();
-renderTopBar();
-renderPage();
+if (isAuthenticated()) {
+  bootstrapApp();
+} else {
+  renderLoginPage(bootstrapApp);
+}

@@ -1,123 +1,130 @@
-/**
- * test local cho hệ thống Backend (Lambda)
- */
-require('dotenv').config(); // Dòng này sẽ đọc file .env vào process.env
+require("dotenv").config();
 
-
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const { SQSClient, SendMessageCommand } = require("@aws-sdk/client-sqs");
 const { CognitoJwtVerifier } = require("aws-jwt-verify");
 
-// Khởi tạo SQS Client
-const sqsClient = new SQSClient({ region: "ap-southeast-1" });
+const awsRegion = process.env.AWS_REGION || "ap-southeast-1";
+const s3Client = new S3Client({ region: awsRegion });
+const sqsClient = new SQSClient({ region: awsRegion });
 
-// Khởi tạo bộ kiểm tra Token (Lấy ID từ biến môi trường, cấu hình AWS sẽ truyền vào sau)
-const verifier = CognitoJwtVerifier.create({
-  userPoolId: process.env.USER_POOL_ID || "DUMMY_POOL_ID",
-  tokenUse: "id",
-  clientId: process.env.CLIENT_ID || "DUMMY_CLIENT_ID",
-});
+let verifier;
 
-exports.handler = async (event) => {
-    // === BƯỚC 1: KIỂM TRA BẢO MẬT CỬA VÀO ===
-    try {
-        // Lấy token từ header mà Frontend gửi lên (thường có dạng "Bearer xxxx.yyyy.zzzz")
-        const authHeader = event.headers.Authorization || event.headers.authorization;
-        
-        if (!authHeader || !authHeader.startsWith("Bearer ")) {
-            return {
-                statusCode: 401,
-                headers: { "Access-Control-Allow-Origin": "*" },
-                body: JSON.stringify({ message: "Truy cập bị từ chối. Vui lòng đăng nhập!" })
-            };
-        }
+function jsonResponse(statusCode, payload) {
+    return {
+        statusCode,
+        headers: {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "Content-Type,Authorization",
+            "Access-Control-Allow-Methods": "OPTIONS,POST",
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+    };
+}
 
-        // Cắt lấy đoạn mã Token thực sự
-        const token = authHeader.split(" ")[1];
+function isLocalAuthDisabled() {
+    return !process.env.USER_POOL_ID || ["fake_pool_id", "DUMMY_POOL_ID"].includes(process.env.USER_POOL_ID);
+}
 
-        // Xác thực Token với AWS Cognito (Nếu đang chạy local không có Pool ID thì bỏ qua để test logic)
-        // if (process.env.USER_POOL_ID) {
-        //     const payload = await verifier.verify(token);
-        //     console.log("Người dùng hợp lệ:", payload.email);
-        // } else {
-        //     console.warn("Chưa có cấu hình Cognito. Tạm thời cho qua để test Local.");
-        // }
-        if (process.env.USER_POOL_ID && process.env.USER_POOL_ID !== "fake_pool_id") {
-            const payload = await verifier.verify(token);
-            console.log("Người dùng hợp lệ:", payload.email);
-        } else {
-            console.log("Đang chạy chế độ Local - Bỏ qua xác thực Cognito!");
-        }
-
-    } catch (err) {
-        console.error("Token không hợp lệ hoặc đã hết hạn:", err);
-        return {
-            statusCode: 401,
-            headers: { "Access-Control-Allow-Origin": "*" },
-            body: JSON.stringify({ message: "Phiên đăng nhập không hợp lệ." })
-        };
+async function verifyRequest(event) {
+    if (isLocalAuthDisabled()) {
+        console.log("Dang chay local - bo qua xac thuc Cognito.");
+        return;
     }
 
-    try {
-        // 1. Parse dữ liệu từ API Gateway
-        const body = JSON.parse(event.body);
-        const { stockSymbol, timeFrame } = body;
+    const authHeader = event.headers?.Authorization || event.headers?.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        const error = new Error("Truy cap bi tu choi. Vui long dang nhap.");
+        error.statusCode = 401;
+        throw error;
+    }
 
-        // 2. Validate dữ liệu đầu vào
-        if (!stockSymbol || !timeFrame) {
-            return {
-                statusCode: 400,
-                headers: { 
-                    "Access-Control-Allow-Origin": "*", 
-                    "Content-Type": "application/json" 
-                },
-                body: JSON.stringify({ message: "Thiếu thông tin mã cổ phiếu hoặc khung thời gian." })
-            };
+    const token = authHeader.split(" ")[1];
+    if (!verifier) {
+        verifier = CognitoJwtVerifier.create({
+            userPoolId: process.env.USER_POOL_ID,
+            tokenUse: "id",
+            clientId: process.env.CLIENT_ID
+        });
+    }
+    const payload = await verifier.verify(token);
+    console.log("Nguoi dung hop le:", payload.email || payload.sub);
+}
+
+async function saveRawRequestToS3(payload) {
+    const bucketName = process.env.RAW_DATA_BUCKET;
+    if (!bucketName) {
+        console.warn("Chua cau hinh RAW_DATA_BUCKET. Bo qua buoc luu raw JSON vao S3.");
+        return null;
+    }
+
+    const safeTimestamp = payload.timestamp.replace(/[:.]/g, "-");
+    const objectKey = `raw-ingestion/${payload.stockSymbol}/${safeTimestamp}.json`;
+
+    const command = new PutObjectCommand({
+        Bucket: bucketName,
+        Key: objectKey,
+        Body: JSON.stringify(payload, null, 2),
+        ContentType: "application/json"
+    });
+
+    await s3Client.send(command);
+    console.log(`Da luu raw ingestion vao S3: s3://${bucketName}/${objectKey}`);
+    return objectKey;
+}
+
+exports.handler = async (event) => {
+    try {
+        if (event.httpMethod === "OPTIONS" || event.requestContext?.http?.method === "OPTIONS") {
+            return jsonResponse(200, { message: "OK" });
         }
 
-        // 3. Chuẩn bị payload để đẩy vào SQS
+        await verifyRequest(event);
+
+        const body = typeof event.body === "string" ? JSON.parse(event.body || "{}") : (event.body || {});
+        const { stockSymbol, timeFrame } = body;
+
+        if (!stockSymbol || !timeFrame) {
+            return jsonResponse(400, { message: "Thieu thong tin ma co phieu hoac khung thoi gian." });
+        }
+
         const messagePayload = {
             stockSymbol: stockSymbol.toUpperCase(),
-            timeFrame: timeFrame,
+            timeFrame,
             timestamp: new Date().toISOString(),
             status: "PENDING"
         };
 
-        // 4. Lấy URL của SQS Queue từ biến môi trường (Environment Variables)
+        const rawObjectKey = await saveRawRequestToS3(messagePayload);
+
         const queueUrl = process.env.SQS_QUEUE_URL;
         if (queueUrl) {
             const command = new SendMessageCommand({
                 QueueUrl: queueUrl,
-                MessageBody: JSON.stringify(messagePayload)
+                MessageBody: JSON.stringify({
+                    ...messagePayload,
+                    rawObjectKey
+                })
             });
             await sqsClient.send(command);
-            console.log(`Đã đẩy yêu cầu phân tích ${stockSymbol} vào SQS.`);
+            console.log(`Da day yeu cau phan tich ${stockSymbol} vao SQS.`);
         } else {
-            console.warn("Chưa cấu hình biến môi trường SQS_QUEUE_URL. Bỏ qua bước đẩy vào SQS.");
+            console.warn("Chua cau hinh SQS_QUEUE_URL. Bo qua buoc day vao SQS.");
         }
 
-        // 5. Trả về kết quả cho Frontend
-        return {
-            statusCode: 200,
-            headers: { 
-                "Access-Control-Allow-Origin": "*", 
-                "Content-Type": "application/json" 
-            },
-            body: JSON.stringify({
-                message: "Đã tiếp nhận yêu cầu phân tích thành công",
-                data: messagePayload
-            })
-        };
-
+        return jsonResponse(200, {
+            message: "Da tiep nhan yeu cau phan tich thanh cong",
+            data: {
+                ...messagePayload,
+                rawObjectKey
+            }
+        });
     } catch (error) {
-        console.error("Lỗi Ingestion Lambda:", error);
-        
-        return {
-            statusCode: 500,
-            headers: { 
-                "Access-Control-Allow-Origin": "*", 
-                "Content-Type": "application/json" 
-            },
-            body: JSON.stringify({ message: "Lỗi máy chủ nội bộ", error: error.message })
-        };
+        console.error("Loi Ingestion Lambda:", error);
+        return jsonResponse(error.statusCode || 500, {
+            message: error.statusCode === 401 ? error.message : "Loi may chu noi bo",
+            error: error.message
+        });
     }
 };
