@@ -1,9 +1,50 @@
 const { SQSClient, SendMessageCommand } = require("@aws-sdk/client-sqs");
+const { CognitoJwtVerifier } = require("aws-jwt-verify");
 
-// Khởi tạo SQS Client (Khu vực có thể thay đổi tùy cấu hình của Nam và Thiên)
+// Khởi tạo SQS Client
 const sqsClient = new SQSClient({ region: "ap-southeast-1" });
 
+// Khởi tạo bộ kiểm tra Token (Lấy ID từ biến môi trường, cấu hình AWS sẽ truyền vào sau)
+const verifier = CognitoJwtVerifier.create({
+  userPoolId: process.env.USER_POOL_ID || "DUMMY_POOL_ID",
+  tokenUse: "id",
+  clientId: process.env.CLIENT_ID || "DUMMY_CLIENT_ID",
+});
+
 exports.handler = async (event) => {
+    // === BƯỚC 1: KIỂM TRA BẢO MẬT CỬA VÀO ===
+    try {
+        // Lấy token từ header mà Frontend gửi lên (thường có dạng "Bearer xxxx.yyyy.zzzz")
+        const authHeader = event.headers.Authorization || event.headers.authorization;
+        
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            return {
+                statusCode: 401,
+                headers: { "Access-Control-Allow-Origin": "*" },
+                body: JSON.stringify({ message: "Truy cập bị từ chối. Vui lòng đăng nhập!" })
+            };
+        }
+
+        // Cắt lấy đoạn mã Token thực sự
+        const token = authHeader.split(" ")[1];
+
+        // Xác thực Token với AWS Cognito (Nếu đang chạy local không có Pool ID thì bỏ qua để test logic)
+        if (process.env.USER_POOL_ID) {
+            const payload = await verifier.verify(token);
+            console.log("Người dùng hợp lệ:", payload.email);
+        } else {
+            console.warn("Chưa có cấu hình Cognito. Tạm thời cho qua để test Local.");
+        }
+
+    } catch (err) {
+        console.error("Token không hợp lệ hoặc đã hết hạn:", err);
+        return {
+            statusCode: 401,
+            headers: { "Access-Control-Allow-Origin": "*" },
+            body: JSON.stringify({ message: "Phiên đăng nhập không hợp lệ." })
+        };
+    }
+
     try {
         // 1. Parse dữ liệu từ API Gateway
         const body = JSON.parse(event.body);
