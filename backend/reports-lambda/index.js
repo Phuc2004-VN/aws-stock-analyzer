@@ -1,3 +1,9 @@
+/**
+ * test local cho hệ thống Backend (Lambda)
+ */
+require('dotenv').config(); // Dòng này sẽ đọc file .env vào process.env
+
+
 const { CognitoJwtVerifier } = require("aws-jwt-verify");
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const { DynamoDBDocumentClient, QueryCommand } = require("@aws-sdk/lib-dynamodb");
@@ -25,8 +31,13 @@ exports.handler = async (event) => {
             };
         }
         const token = authHeader.split(" ")[1];
-        if (process.env.USER_POOL_ID) {
-            await verifier.verify(token);
+        // if (process.env.USER_POOL_ID) {
+        //     await verifier.verify(token);
+        // }
+        if (process.env.USER_POOL_ID && process.env.USER_POOL_ID !== "fake_pool_id") {
+            await verifier.verify(token); // Chỉ xác thực thật nếu ID không phải là đồ fake
+        } else {
+            console.log("Đang chạy chế độ Local - Bỏ qua xác thực Cognito!");
         }
     } catch (err) {
         return {

@@ -1,3 +1,9 @@
+/**
+ * test local cho hệ thống Backend (Lambda)
+ */
+require('dotenv').config(); // Dòng này sẽ đọc file .env vào process.env
+
+
 const { SQSClient, SendMessageCommand } = require("@aws-sdk/client-sqs");
 const { CognitoJwtVerifier } = require("aws-jwt-verify");
 
@@ -29,11 +35,17 @@ exports.handler = async (event) => {
         const token = authHeader.split(" ")[1];
 
         // Xác thực Token với AWS Cognito (Nếu đang chạy local không có Pool ID thì bỏ qua để test logic)
-        if (process.env.USER_POOL_ID) {
+        // if (process.env.USER_POOL_ID) {
+        //     const payload = await verifier.verify(token);
+        //     console.log("Người dùng hợp lệ:", payload.email);
+        // } else {
+        //     console.warn("Chưa có cấu hình Cognito. Tạm thời cho qua để test Local.");
+        // }
+        if (process.env.USER_POOL_ID && process.env.USER_POOL_ID !== "fake_pool_id") {
             const payload = await verifier.verify(token);
             console.log("Người dùng hợp lệ:", payload.email);
         } else {
-            console.warn("Chưa có cấu hình Cognito. Tạm thời cho qua để test Local.");
+            console.log("Đang chạy chế độ Local - Bỏ qua xác thực Cognito!");
         }
 
     } catch (err) {
