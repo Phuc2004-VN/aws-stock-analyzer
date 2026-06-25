@@ -41,7 +41,8 @@ exports.handler = async (event) => {
         // } else {
         //     console.warn("Chưa có cấu hình Cognito. Tạm thời cho qua để test Local.");
         // }
-        if (process.env.USER_POOL_ID && process.env.USER_POOL_ID !== "fake_pool_id") {
+        // Xác thực Token với AWS Cognito
+        if (process.env.USER_POOL_ID && process.env.USER_POOL_ID !== "ap-southeast-1_fakePool123") {
             const payload = await verifier.verify(token);
             console.log("Người dùng hợp lệ:", payload.email);
         } else {
@@ -82,9 +83,24 @@ exports.handler = async (event) => {
             status: "PENDING"
         };
 
+        // // 4. Lấy URL của SQS Queue từ biến môi trường (Environment Variables)
+        // const queueUrl = process.env.SQS_QUEUE_URL;
+        // if (queueUrl) {
+        //     const command = new SendMessageCommand({
+        //         QueueUrl: queueUrl,
+        //         MessageBody: JSON.stringify(messagePayload)
+        //     });
+        //     await sqsClient.send(command);
+        //     console.log(`Đã đẩy yêu cầu phân tích ${stockSymbol} vào SQS.`);
+        // } else {
+        //     console.warn("Chưa cấu hình biến môi trường SQS_QUEUE_URL. Bỏ qua bước đẩy vào SQS.");
+        // }
+
         // 4. Lấy URL của SQS Queue từ biến môi trường (Environment Variables)
         const queueUrl = process.env.SQS_QUEUE_URL;
-        if (queueUrl) {
+        
+        // Thêm điều kiện !== "fake_sqs_url" vào đây nè:
+        if (queueUrl && queueUrl !== "fake_sqs_url") { 
             const command = new SendMessageCommand({
                 QueueUrl: queueUrl,
                 MessageBody: JSON.stringify(messagePayload)
@@ -92,7 +108,7 @@ exports.handler = async (event) => {
             await sqsClient.send(command);
             console.log(`Đã đẩy yêu cầu phân tích ${stockSymbol} vào SQS.`);
         } else {
-            console.warn("Chưa cấu hình biến môi trường SQS_QUEUE_URL. Bỏ qua bước đẩy vào SQS.");
+            console.log(`[LOCAL MODE] Đã giả lập đẩy yêu cầu ${stockSymbol} vào SQS thành công! Bỏ qua kết nối AWS thật.`);
         }
 
         // 5. Trả về kết quả cho Frontend

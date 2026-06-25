@@ -35,11 +35,14 @@ exports.handler = async (event) => {
         // if (process.env.USER_POOL_ID) {
         //     await verifier.verify(token);
         // }
-        if (process.env.USER_POOL_ID && process.env.USER_POOL_ID !== "fake_pool_id") {
-            await verifier.verify(token); // Chỉ xác thực thật nếu ID không phải là đồ fake
+        // Xác thực Token với AWS Cognito
+        if (process.env.USER_POOL_ID && process.env.USER_POOL_ID !== "ap-southeast-1_fakePool123") {
+            const payload = await verifier.verify(token);
+            console.log("Người dùng hợp lệ:", payload.email);
         } else {
             console.log("Đang chạy chế độ Local - Bỏ qua xác thực Cognito!");
         }
+        
     } catch (err) {
         return {
             statusCode: 401,
