@@ -45,5 +45,5 @@ app.delete('/api/alerts/:alertId', async (req, res) => {
 
 // Bật server
 app.listen(3000, () => {
-    console.log("🚀 Server giả lập AWS API Gateway đang chạy tại: http://localhost:3000");
+    console.log("Server giả lập AWS API Gateway đang chạy tại: http://localhost:3000");
 });
