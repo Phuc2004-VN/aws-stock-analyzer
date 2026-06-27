@@ -17,7 +17,15 @@ const verifier = CognitoJwtVerifier.create({
   clientId: process.env.CLIENT_ID || "DUMMY_CLIENT_ID",
 });
 
+const reports = require('./reports-logic');
+const alerts = require('./alerts-logic');
+
 exports.handler = async (event) => {
+    const path = event.path || "";
+    // Dùng includes để bắt đúng API dù có prefix (/api/...) hay params (/alerts/123)
+    if (path.includes('/reports')) return reports.handler(event);
+    if (path.includes('/alerts')) return alerts.handler(event);
+
     // === BƯỚC 1: KIỂM TRA BẢO MẬT CỬA VÀO ===
     try {
         // Lấy token từ header mà Frontend gửi lên (thường có dạng "Bearer xxxx.yyyy.zzzz")
