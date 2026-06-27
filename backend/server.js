@@ -1,49 +1,56 @@
+/**
+ * Server giả lập AWS API Gateway cho môi trường Local
+ */
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 
+// Import Ingestion Lambda
+const ingestionLambda = require('./ingestion-lambda/index');
+
 const app = express();
-app.use(cors()); // Mở cửa sổ cho Frontend gọi vào
-app.use(express.json()); // Cho phép đọc dữ liệu JSON Lực gửi lên
 
-// Import các hàm Lambda của bạn
-const ingestion = require('./ingestion-lambda/index.js');
-const reports = require('./reports-lambda/index.js');
-const alerts = require('./alerts-lambda/index.js');
+// Cấu hình Middleware
+app.use(cors());
+app.use(express.json()); 
+app.use(express.urlencoded({ extended: true }));
 
-// Hàm "phép thuật": Biến request của Express thành định dạng Event của AWS Lambda
-const createEvent = (req) => ({
-    httpMethod: req.method,
-    headers: req.headers,
-    body: JSON.stringify(req.body),
-    queryStringParameters: req.query,
-    pathParameters: req.params
+// SỬA LỖI Ở ĐÂY: Dùng app.use() thay cho app.all('*') để tương thích với Express v5
+app.use(async (req, res) => {
+    // Giả lập đối tượng `event` chuẩn cấu trúc của AWS Lambda
+    const event = {
+        path: req.path,                            
+        httpMethod: req.method,                    
+        headers: req.headers,                      
+        // Thêm điều kiện check an toàn để tránh lỗi undefined
+        body: (req.body && Object.keys(req.body).length > 0) ? JSON.stringify(req.body) : null,
+        queryStringParameters: (req.query && Object.keys(req.query).length > 0) ? req.query : null,          
+        pathParameters: req.params
+    };
+
+    try {
+        // Gọi hàm handler của Ingestion Lambda và đợi kết quả
+        const result = await ingestionLambda.handler(event);
+        
+        // Trả dữ liệu ngược lại cho Frontend
+        res.status(result.statusCode || 200)
+           .set(result.headers || {})
+           .send(result.body);
+
+    } catch (error) {
+        console.error("Lỗi giả lập API Gateway:", error);
+        res.status(500).json({ 
+            message: "Lỗi giả lập API Gateway nội bộ", 
+            error: error.message 
+        });
+    }
 });
 
-// API 1.1: Tiếp nhận yêu cầu
-app.post('/api/analyze', async (req, res) => {
-    const result = await ingestion.handler(createEvent(req));
-    res.status(result.statusCode).set(result.headers).send(result.body);
-});
-
-// API 1.2: Lấy báo cáo
-app.get('/api/reports', async (req, res) => {
-    const result = await reports.handler(createEvent(req));
-    res.status(result.statusCode).set(result.headers).send(result.body);
-});
-
-// API 1.3, 1.4: Tạo và lấy danh sách cảnh báo
-app.all('/api/alerts', async (req, res) => {
-    const result = await alerts.handler(createEvent(req));
-    res.status(result.statusCode).set(result.headers).send(result.body);
-});
-
-// API 1.5: Xóa cảnh báo
-app.delete('/api/alerts/:alertId', async (req, res) => {
-    const result = await alerts.handler(createEvent(req));
-    res.status(result.statusCode).set(result.headers).send(result.body);
-});
-
-// Bật server
-app.listen(3000, () => {
-    console.log("Server giả lập AWS API Gateway đang chạy tại: http://localhost:3000");
+// Khởi chạy Server ở cổng 3000
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`==================================================`);
+    console.log(`Server giả lập AWS API Gateway đang chạy tại: http://localhost:${PORT}`);
+    console.log(`Đang chạy chế độ Local - Bỏ qua xác thực Cognito!`);
+    console.log(`==================================================`);
 });
