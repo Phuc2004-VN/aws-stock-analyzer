@@ -11,25 +11,35 @@
 async function getHistoricalData(stockSymbol, timeFrame) {
     console.log(`[stockService] Đang lấy dữ liệu lịch sử cho mã ${stockSymbol} (khung: ${timeFrame})...`);
     
-    // Link API của Yahoo Finance cho chứng khoán VN (thêm đuôi .VN)
-    const apiUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${stockSymbol}.VN?interval=1d&range=1mo`;
+    // Bổ sung logic map timeFrame của Frontend với interval của Yahoo Finance
+    let interval = "1d";
+    let range = "3mo"; // 3 tháng đủ để tính MA50 ngày
+
+    if (timeFrame === "1W") {
+        interval = "1wk";
+        range = "1y"; // Khung Tuần: Lấy 1 năm mới đủ 50 tuần để tính MA50
+    } else if (timeFrame === "1M") {
+        interval = "1mo";
+        range = "5y"; // Khung Tháng: Lấy 5 năm mới đủ 50 tháng để tính MA50
+    }
+
+    const apiUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${stockSymbol}.VN?interval=${interval}&range=${range}`;
 
     try {
-        console.time("1. Tốc độ cào API Yahoo");
+        console.time("Tốc độ cào API Yahoo");
         const response = await fetch(apiUrl);
         const data = await response.json();
-        console.timeEnd("2. Tốc độ cào API Yahoo");
+        console.timeEnd("Tốc độ cào API Yahoo");
 
         // Bóc tách dữ liệu từ Yahoo trả về
         const timestamps = data.chart.result[0].timestamp;
         const indicators = data.chart.result[0].indicators.quote[0];
         
         const history = [];
-        // Lọc lấy khoảng 14 ngày gần nhất để AI và hàm tính RSI xử lý cho lẹ
-        const startIndex = Math.max(0, timestamps.length - 14);
-
-        for (let i = startIndex; i < timestamps.length; i++) {
-            // Chỉ lấy những ngày có dữ liệu hợp lệ
+        
+        // ĐÃ SỬA: Lấy toàn bộ ngày có dữ liệu để ném cho hàm tính MA50 xử lý, không cắt bớt 14 ngày nữa
+        for (let i = 0; i < timestamps.length; i++) {
+            // Chỉ lấy những ngày có dữ liệu hợp lệ (không bị null)
             if (indicators.close[i] !== null) {
                 history.push({
                     time: new Date(timestamps[i] * 1000).toISOString().split('T')[0],

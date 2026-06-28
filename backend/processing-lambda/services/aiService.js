@@ -71,7 +71,15 @@ async function generateTechnicalAnalysis(stockSymbol, history, indicators) {
         
         // Parse kết quả trả về từ Bedrock Claude
         const aiText = responseBody.content[0].text;
-        return JSON.parse(aiText);
+        // return JSON.parse(aiText);
+        // Parse kết quả trả về từ Bedrock Claude an toàn bằng Regex
+        const jsonMatch = aiText.match(/\{[\s\S]*\}/); // Móc lấy phần nằm trong dấu ngoặc nhọn {}
+        
+        if (jsonMatch) {
+            return JSON.parse(jsonMatch[0]);
+        } else {
+            return JSON.parse(aiText); // Fallback
+        }
     } catch (error) {
         console.error("Lỗi khi gọi Bedrock:", error);
         // Fallback khi lỗi
