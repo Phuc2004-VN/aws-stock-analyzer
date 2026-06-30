@@ -13,7 +13,7 @@ async function getHistoricalData(stockSymbol, timeFrame) {
     
     // Bổ sung logic map timeFrame của Frontend với interval của Yahoo Finance
     let interval = "1d";
-    let range = "3mo"; // 3 tháng đủ để tính MA50 ngày
+    let range = "6mo"; // Tăng lên 6 tháng để đảm bảo đủ >50 ngày giao dịch cho việc tính MA50 và RSI chính xác
 
     if (timeFrame === "1W") {
         interval = "1wk";

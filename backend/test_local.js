@@ -11,6 +11,9 @@ async function runLocalTests() {
 
     // 1. Giả lập yêu cầu từ API Gateway gửi tới Ingestion Lambda
     const mockApiGatewayEvent = {
+        headers: {
+            Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJsb2NhbC10cmFkZXIiLCJlbWFpbCI6InRyYWRlckBleGFtcGxlLmNvbSIsInJvbGUiOiJUUkFERVIiLCJpYXQiOjE3ODIyOTg2NjF9.fake-signature-for-local-test"
+        },
         body: JSON.stringify({
             stockSymbol: "FPT",
             timeFrame: "1D"

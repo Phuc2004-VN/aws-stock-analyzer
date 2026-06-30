@@ -29,7 +29,7 @@ exports.handler = async (event) => {
     // === BƯỚC 1: KIỂM TRA BẢO MẬT CỬA VÀO ===
     try {
         // Lấy token từ header mà Frontend gửi lên (thường có dạng "Bearer xxxx.yyyy.zzzz")
-        const authHeader = event.headers.Authorization || event.headers.authorization;
+        const authHeader = event.headers?.Authorization || event.headers?.authorization;
         
         if (!authHeader || !authHeader.startsWith("Bearer ")) {
             return {

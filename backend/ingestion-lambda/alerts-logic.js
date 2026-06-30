@@ -21,9 +21,11 @@ const client = new DynamoDBClient({ region: "ap-southeast-1" });
 const docClient = DynamoDBDocumentClient.from(client);
 
 exports.handler = async (event) => {
+    let verifiedEmail = "";
+
     // === CỬA BẢO VỆ (AUTH CHECK) ===
     try {
-        const authHeader = event.headers.Authorization || event.headers.authorization;
+        const authHeader = event.headers?.Authorization || event.headers?.authorization;
         if (!authHeader || !authHeader.startsWith("Bearer ")) {
             return {
                 statusCode: 401,
@@ -32,15 +34,25 @@ exports.handler = async (event) => {
             };
         }
         const token = authHeader.split(" ")[1];
-        // if (process.env.USER_POOL_ID) {
-        //     await verifier.verify(token);
-        // }
+        
         // Xác thực Token với AWS Cognito
         if (process.env.USER_POOL_ID && process.env.USER_POOL_ID !== "ap-southeast-1_fakePool123") {
             const payload = await verifier.verify(token);
+            verifiedEmail = payload.email || "";
             console.log("Người dùng hợp lệ:", payload.email);
         } else {
             console.log("Đang chạy chế độ Local - Bỏ qua xác thực Cognito!");
+            // Trích xuất email từ mock token payload phục vụ local test
+            try {
+                const tokenParts = token.split(".");
+                if (tokenParts.length === 3) {
+                    const payloadBase64 = tokenParts[1].replace(/-/g, '+').replace(/_/g, '/');
+                    const decodedPayload = JSON.parse(Buffer.from(payloadBase64, 'base64').toString('utf8'));
+                    verifiedEmail = decodedPayload.email || "";
+                }
+            } catch (e) {
+                console.warn("Không thể parse email từ local token:", e.message);
+            }
         }
         
     } catch (err) {
@@ -83,7 +95,7 @@ exports.handler = async (event) => {
 
         // === XỬ LÝ API 1.4: LẤY DANH SÁCH CẢNH BÁO (GET) ===
         if (httpMethod === "GET") {
-            const email = event.queryStringParameters?.email;
+            const email = verifiedEmail || event.queryStringParameters?.email;
             if (!email) {
                 return {
                     statusCode: 400,

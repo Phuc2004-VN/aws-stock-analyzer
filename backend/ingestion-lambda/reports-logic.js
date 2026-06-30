@@ -52,8 +52,9 @@ exports.handler = async (event) => {
 
     // === LOGIC LẤY BÁO CÁO TỪ DYNAMODB ===
     try {
-        // Lấy mã cổ phiếu từ URL (Ví dụ: /api/reports?symbol=FPT)
+        // Lấy mã cổ phiếu từ URL (Ví dụ: /api/reports?symbol=FPT&timeframe=1D)
         const symbol = event.queryStringParameters?.symbol;
+        const timeframe = event.queryStringParameters?.timeframe || event.queryStringParameters?.timeFrame || "1D";
         
         if (!symbol) {
             return {
@@ -63,12 +64,13 @@ exports.handler = async (event) => {
             };
         }
 
-        // Truy vấn bảng StockReports để lấy báo cáo mới nhất của mã cổ phiếu này
+        // Truy vấn bảng StockReports để lấy báo cáo mới nhất của mã cổ phiếu này theo đúng khung thời gian
         const command = new QueryCommand({
             TableName: "StockReports",
-            KeyConditionExpression: "stockSymbol = :symbol",
+            KeyConditionExpression: "stockSymbol = :symbol AND begins_with(timeFrameTimestamp, :tfPrefix)",
             ExpressionAttributeValues: {
-                ":symbol": symbol.toUpperCase()
+                ":symbol": symbol.toUpperCase(),
+                ":tfPrefix": `${timeframe.toUpperCase()}#`
             },
             ScanIndexForward: false, // Sắp xếp giảm dần để lấy cái mới nhất (thời gian gần nhất)
             Limit: 1
