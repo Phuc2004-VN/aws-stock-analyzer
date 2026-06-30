@@ -39,14 +39,45 @@ exports.handler = async (event) => {
             const aiAnalysis = await aiService.generateTechnicalAnalysis(stockSymbol, history, indicators);
             console.log(`AI khuyến nghị: [${aiAnalysis.recommendation}]`);
 
-            // 4. Lưu báo cáo phân tích tổng hợp vào DynamoDB
+            // 4. Lưu báo cáo phân tích tổng hợp vào DynamoDB (bổ sung các trường đáp ứng yêu cầu vẽ biểu đồ và hiển thị của Frontend)
+            const previousClose = history.length > 1 ? history[history.length - 2].close : latestPrice;
+            const change = latestPrice - previousClose;
+            const changePercent = previousClose > 0 ? parseFloat(((change / previousClose) * 100).toFixed(2)) : 0;
+            
+            const companyNames = {
+                "FPT": "FPT Corporation",
+                "VNM": "Vinamilk",
+                "VIC": "Vingroup",
+                "HPG": "Hòa Phát Group",
+                "MWG": "Thế Giới Di Động",
+                "VCB": "Vietcombank",
+                "TCB": "Techcombank",
+                "MSN": "Masan Group"
+            };
+            const companyName = companyNames[stockSymbol.toUpperCase()] || `${stockSymbol.toUpperCase()} Corporation`;
+
+            // Định dạng lịch sử giá: đổi thuộc tính 'time' thành 'date' và chỉ lấy 30 phiên gần nhất cho chart của Frontend
+            const priceHistory = history.map(p => ({
+                date: p.time,
+                open: p.open,
+                high: p.high,
+                low: p.low,
+                close: p.close,
+                volume: p.volume
+            })).slice(-30);
+
             const reportPayload = {
                 stockSymbol,
+                companyName,
                 timeFrame,
                 timestamp: new Date().toISOString(),
                 currentPrice: latestPrice,
+                previousClose,
+                change,
+                changePercent,
                 indicators,
-                aiAnalysis
+                aiAnalysis,
+                priceHistory
             };
             await dbService.saveAnalysisReport(reportPayload);
 

@@ -22,8 +22,13 @@ async function saveAnalysisReport(report) {
                 timeFrame: report.timeFrame,
                 timestamp: report.timestamp,
                 currentPrice: report.currentPrice,
+                companyName: report.companyName,
+                previousClose: report.previousClose,
+                change: report.change,
+                changePercent: report.changePercent,
                 indicators: report.indicators,
-                aiAnalysis: report.aiAnalysis
+                aiAnalysis: report.aiAnalysis,
+                priceHistory: report.priceHistory
             }
         });
         await docClient.send(command);
