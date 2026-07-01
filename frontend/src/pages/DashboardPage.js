@@ -1,7 +1,8 @@
 /**
  * Dashboard Page - Market command center
  */
-import { mockReports, mockMarketSummary, formatVND, formatPercent } from '../data/mockData.js';
+import { formatVND, formatPercent } from '../data/mockData.js';
+import { getAllReports, getMarketSummary } from '../services/apiService.js';
 
 const sectorMap = {
   FPT: { sector: 'Công nghệ', weight: 18.5 },
@@ -35,8 +36,26 @@ const sectorPerformance = [
 ];
 
 export function renderDashboardPage(container) {
-  const ms = mockMarketSummary;
-  const reports = Object.values(mockReports);
+  container.innerHTML = `
+    <div class="card" style="text-align:center;padding:42px">
+      <span class="loading-spinner"></span>
+    </div>
+  `;
+
+  loadDashboard(container);
+}
+
+async function loadDashboard(container) {
+  let ms;
+  let reports;
+
+  try {
+    [ms, reports] = await Promise.all([getMarketSummary(), getAllReports()]);
+  } catch (error) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">!</div><div class="empty-state-text">${error.message}</div></div>`;
+    return;
+  }
+
   const buyCount = reports.filter(r => r.aiAnalysis.recommendation === 'BUY').length;
   const holdCount = reports.filter(r => r.aiAnalysis.recommendation === 'HOLD').length;
   const sellCount = reports.filter(r => r.aiAnalysis.recommendation === 'SELL').length;

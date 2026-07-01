@@ -2,7 +2,7 @@
  * API Service Layer
  * Uses API Gateway when VITE_API_BASE is configured, otherwise falls back to mock data.
  */
-import { mockReports, mockAlerts } from '../data/mockData.js';
+import { mockReports, mockAlerts, mockMarketSummary } from '../data/mockData.js';
 import { getAuthToken } from './authService.js';
 
 const API_BASE = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '');
@@ -26,6 +26,19 @@ async function requestJson(path, options = {}) {
   }
 
   return payload;
+}
+
+function toReportList(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (payload?.data && typeof payload.data === 'object') return Object.values(payload.data);
+  if (payload && typeof payload === 'object') return Object.values(payload);
+  return [];
+}
+
+function warnApiFallback(resource, error) {
+  console.warn(`Using mock ${resource} because API is unavailable:`, error);
 }
 
 export async function submitAnalysis(stockSymbol, timeFrame) {
@@ -54,7 +67,11 @@ export async function submitAnalysis(stockSymbol, timeFrame) {
 
 export async function getReport(symbol, timeframe = '1D') {
   if (API_BASE) {
-    return requestJson(`/api/reports?symbol=${encodeURIComponent(symbol)}&timeframe=${encodeURIComponent(timeframe)}`);
+    try {
+      return await requestJson(`/api/reports?symbol=${encodeURIComponent(symbol)}&timeframe=${encodeURIComponent(timeframe)}`);
+    } catch (error) {
+      warnApiFallback('report', error);
+    }
   }
 
   await new Promise(r => setTimeout(r, 500));
@@ -68,19 +85,44 @@ export async function getReport(symbol, timeframe = '1D') {
 
 export async function getAllReports() {
   if (API_BASE) {
-    const payload = await requestJson('/api/reports');
-    return Array.isArray(payload) ? payload : payload.items || [];
+    try {
+      const payload = await requestJson('/api/reports');
+      const reports = toReportList(payload);
+      if (reports.length > 0) return reports;
+    } catch (error) {
+      warnApiFallback('reports', error);
+    }
   }
 
   await new Promise(r => setTimeout(r, 300));
   return Object.values(mockReports);
 }
 
+export async function getMarketSummary() {
+  if (API_BASE) {
+    try {
+      const payload = await requestJson('/api/market-summary');
+      return payload?.data || payload;
+    } catch (error) {
+      warnApiFallback('market summary', error);
+    }
+  }
+
+  await new Promise(r => setTimeout(r, 150));
+  return mockMarketSummary;
+}
+
 export async function getAlerts(symbol = '') {
   if (API_BASE) {
-    const query = symbol ? `?symbol=${encodeURIComponent(symbol)}` : '';
-    const payload = await requestJson(`/api/alerts${query}`);
-    return Array.isArray(payload) ? payload : payload.items || [];
+    try {
+      const query = symbol ? `?symbol=${encodeURIComponent(symbol)}` : '';
+      const payload = await requestJson(`/api/alerts${query}`);
+      if (Array.isArray(payload)) return payload;
+      if (Array.isArray(payload?.items)) return payload.items;
+      if (Array.isArray(payload?.data)) return payload.data;
+    } catch (error) {
+      warnApiFallback('alerts', error);
+    }
   }
 
   await new Promise(r => setTimeout(r, 400));
